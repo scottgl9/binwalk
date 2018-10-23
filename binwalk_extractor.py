@@ -4,11 +4,14 @@ import os
 import sys
 import argparse
 import json
+import simplejson
 import lzma
 
 def binwalk_extract(filename, path):
     offsets = []
     descriptions = []
+
+    print("Opening {}...".format(filename))
 
     for module in binwalk.scan(filename, signature=True, quiet=True):
         for result in module.results:
@@ -22,6 +25,9 @@ def binwalk_extract(filename, path):
     part = None
 
     desc = {}
+
+    if not os.path.exists(path):
+        os.mkdir(path)
 
     for i in range(0, len(offsets) - 2):
         o1 = offsets[i]
@@ -41,13 +47,16 @@ def binwalk_extract(filename, path):
         outpath="{}/{}".format(path, outname)
         desc[outname] = { 'start': o1, 'end': o2, 'info': descriptions[i] }
         part = data[o1:o2]
-        with open(outname, "wb") as binary_file:
+        with open(outpath, "wb") as binary_file:
             binary_file.write(part)
         if ext == "7z":
-            os.system("lzcat -q -q {} > {}".format(outname, "{}.bin".format(i)))
-            os.mkdir("{}".format(i))
-    with open("info.json", "w") as f:
-        f.write(json.dumps(desc))
+            os.system("lzcat -q -q {} > {}".format(outpath, outpath.replace(".7z", ".bin")))
+            extract_path = "{}/{}".format(path, i)
+            if not os.path.exists(extract_path):
+                os.mkdir(extract_path)
+            binwalk_extract(outpath.replace(".7z",".bin"), extract_path)
+    with open(path+"/info.json", "w") as f:
+        f.write(simplejson.dumps(desc, indent=4, sort_keys=True))
 
 
 if __name__ == '__main__':
@@ -56,7 +65,12 @@ if __name__ == '__main__':
                         default='filename.bin',
                         help='filename of firmware to analyze')
 
+    parser.add_argument('-d', action='store', dest='outdir',
+                        default='outdir',
+                        help='Output directory of extracted contents')
+
+
     results = parser.parse_args()
 
-    binwalk_extract(results.filename, ".")
+    binwalk_extract(results.filename, results.outdir)
 
