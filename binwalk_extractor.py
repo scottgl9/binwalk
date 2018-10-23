@@ -4,6 +4,7 @@ import os
 import sys
 import argparse
 import json
+import lzma
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -41,11 +42,15 @@ if __name__ == '__main__':
             ext = "der"
         elif "(PE)" in descriptions[i]:
             ext = "exe"
+        elif "PC bitmap" in descriptions[i]:
+            ext = "bmp"
         outname="{}.{}".format(i, ext)
         desc[outname] = { 'start': o1, 'end': o2, 'info': descriptions[i] }
         part = data[o1:o2]
         with open(outname, "wb") as binary_file:
             binary_file.write(part)
+        if ext == "7z":
+            os.system("lzcat -q -q {} > {}".format(outname, "{}.bin".format(i)))
 
     with open("info.json", "w") as f:
         f.write(json.dumps(desc))
