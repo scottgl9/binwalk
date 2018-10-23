@@ -3,6 +3,7 @@ import binwalk
 import os
 import sys
 import argparse
+import json
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -12,14 +13,30 @@ if __name__ == '__main__':
 
     results = parser.parse_args()
 
+    offsets = []
+    descriptions = []
+
     for module in binwalk.scan(results.filename, signature=True, quiet=True):
         for result in module.results:
-            print ("\t%s %s %s  offset=0x%.8X size=%d   %s" % (result.file.path, result.module, result.name, result.offset, result.size, result.description))
-            #if result.offset in module.extractor.output[result.file.path].carved.keys(): #.has_key(result.offset):
-            #    print("Carved data from offset 0x%X to %s" % (result.offset, module.extractor.output[result.file.path].carved[result.offset]))
-            #if result.offset in module.extractor.output[result.file.path].extracted.keys(): #has_key(result.offset):
-            #    print("Extracted %d files from offset 0x%X to '%s' using '%s'" % (len(module.extractor.output[result.file.path].extracted[result.offset]),
-            #                                                                      result.offset,
-            #                                                                      module.extractor.output[result.file.path].extracted[result.offset],
-            #                                                                      module.extractor.output[result.file.path].carved))
+            offsets.append(result.offset)
+            descriptions.append(result.description)
 
+    with open(results.filename, "rb") as binary_file:
+        data = binary_file.read()
+
+    counter=0
+    part = None
+
+    desc = {}
+
+    for i in range(0, len(offsets) - 2):
+        o1 = offsets[i]
+        o2 = offsets[i+1]
+        outname="{}.bin".format(i)
+        desc[outname] = { 'start': o1, 'end': o2, 'info': descriptions[i] }
+        part = data[o1:o2]
+        with open("{}.bin".format(i), "wb") as binary_file:
+            binary_file.write(part)
+
+    with open("info.json", "w") as f:
+        f.write(json.dumps(desc))
