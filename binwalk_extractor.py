@@ -32,10 +32,19 @@ if __name__ == '__main__':
     for i in range(0, len(offsets) - 2):
         o1 = offsets[i]
         o2 = offsets[i+1]
-        outname="{}.bin".format(i)
+        ext = "bin"
+        if "JPEG" in descriptions[i]:
+            ext = "jpg"
+        elif "LZMA" in descriptions[i]:
+            ext = "7z"
+        elif "DER" in descriptions[i]:
+            ext = "der"
+        elif "(PE)" in descriptions[i]:
+            ext = "exe"
+        outname="{}.{}".format(i, ext)
         desc[outname] = { 'start': o1, 'end': o2, 'info': descriptions[i] }
         part = data[o1:o2]
-        with open("{}.bin".format(i), "wb") as binary_file:
+        with open(outname, "wb") as binary_file:
             binary_file.write(part)
 
     with open("info.json", "w") as f:
